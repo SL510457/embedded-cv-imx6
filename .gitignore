@@ -1,0 +1,30 @@
+# Model weights (~235 MB each)
+*.weights
+# LBPH models (200-500 MB), regenerable with host/training/train_lbph.py
+*.yml
+!target/02-face-recognition/haarcascade_frontalface_default.xml
+
+# Training data (not the host/dataset/ scripts)
+/dataset*/
+**/dataset[0-9]*/
+video_frames_output*/
+*.MOV
+*.mp4
+
+# Build output
+*.o
+*.so
+*.so.*
+demo
+screenshot_*/
+out.avi
+result_*.jpg
+result_*.png
+fb0.raw
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+.DS_Store
