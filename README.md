@@ -10,60 +10,23 @@ recognition, object detection, and direct Linux framebuffer rendering. Target
 applications are cross-compiled for ARMv7 and operate without X11, Wayland, or
 hardware DNN acceleration.
 
-![Helmet detection result](docs/images/helmet-detection-demo.jpg)
-
 ## Highlights
 
 - Cross-compiled OpenCV 3.4.7 and `opencv_contrib` for ARMv7 Linux.
+- Enabled OpenMP, ARM NEON, and compiler-level CPU optimizations for the final
+  object-detection build.
 - Captured live video from a USB UVC camera through V4L2.
 - Rendered images directly to `/dev/fb0` without a desktop display server.
 - Supported both a 16-bit LCD framebuffer and 32-bit HDMI output.
 - Implemented aspect-ratio-preserving scaling, centering, and letterboxing.
 - Built an LBPH face-recognition pipeline from 3,194 extracted face images.
 - Integrated CPU-based YOLOv3 helmet detection for high-resolution photos.
-- Trained a custom 30-class YOLOv3 detector on a 3,638-image Darknet dataset.
+- Selected YOLOv3-Tiny after a YOLOv4-Tiny compatibility failure and used it
+  for live COCO object detection on the board.
+- Trained and deployed a custom 30-class YOLOv3 detector using a 3,638-image
+  Darknet dataset.
 - Deployed executables and model assets to an offline target through removable
   storage and a serial console.
-
-## System Architecture
-
-```mermaid
-flowchart LR
-    subgraph Host["Development Host"]
-        Recording["Face recordings"]
-        Dataset["Dataset preparation"]
-        Training["Model training"]
-        Evaluation["Evaluation and tuning"]
-
-        Recording --> Dataset
-        Dataset --> Training
-        Training --> Evaluation
-    end
-
-    subgraph Target["i.MX6Q Target"]
-        Camera["USB UVC camera"]
-        Capture["OpenCV / V4L2"]
-        Vision["Vision pipeline"]
-        Overlay["Boxes and labels"]
-        Convert["Pixel conversion"]
-        Framebuffer["/dev/fb0"]
-        Display["LCD / HDMI"]
-
-        Camera --> Capture
-        Capture --> Vision
-        Vision --> Overlay
-        Overlay --> Convert
-        Convert --> Framebuffer
-        Framebuffer --> Display
-    end
-
-    Evaluation -->|"Model deployment via SD card"| Vision
-```
-
-The host and target are intentionally separated. Dataset preparation, model
-training, and parameter tuning run on a development machine. Camera capture,
-vision processing, and display integration are implemented in C++ for the ARM
-target.
 
 ## Platform
 
@@ -169,9 +132,25 @@ The detector is intended for relatively small helmet regions in high-resolution
 group images. A Haar Cascade approach was evaluated first, but produced too
 many false positives in dense scenes.
 
-![Additional helmet detection result](docs/images/helmet-detection-demo-2.jpg)
+![Helmet detection result](docs/images/helmet-detection-demo.jpg)
 
-### Custom 30-Class YOLOv3 Training
+### Final Project Part 1: Real-Time COCO Detection
+
+The real-time final-project pipeline captures camera frames on the E9V3 board,
+runs CPU inference, filters for selected COCO categories, and writes the
+annotated stream directly to the framebuffer.
+
+YOLOv4-Tiny was evaluated first, but its layers were not adequately supported
+by the target's OpenCV 3.4.7 DNN implementation. The deployed program therefore
+uses YOLOv3-Tiny, with a 320 x 320 inference input, as the compatibility and
+performance tradeoff for the Cortex-A9 platform.
+
+The submitted program filters for five evaluation categories: `book`, `bottle`,
+`keyboard`, `spoon`, and `cup`. The exact YOLOv3-Tiny cfg and weights deployed
+to the board are no longer present in the local archive; `coco.names` and the
+target source are retained.
+
+### Final Project Part 2: Custom 30-Class YOLOv3
 
 A separate custom YOLOv3 model was trained for multi-object recognition in
 complex evaluation photos. The dataset was annotated and managed through
@@ -218,9 +197,18 @@ filters = (classes + 5) x 3
         = 105
 ```
 
-Trained checkpoints were evaluated through OpenCV's DNN module on the
-development host. The repository keeps the network configuration, class list,
-and inference utilities while excluding the large generated weight files.
+The retained final source selects `yolov3_custom_10000_v1.weights`. The model
+was evaluated on the development host and deployed to the E9V3 for photo
+inference, JPEG result export, and LCD framebuffer display. The repository
+keeps the network configuration, class list, host and target inference code,
+and representative output while excluding the large generated weight files.
+
+![Custom 30-class detection result](docs/images/custom-object-detection-2.png)
+
+The archived report, cfg, and inference source retain different image-size
+settings from different stages of the work. These are recorded separately in
+[`docs/model-and-dataset-provenance.md`](docs/model-and-dataset-provenance.md)
+rather than collapsed into one unsupported value.
 
 ## Engineering Challenges
 
@@ -229,6 +217,12 @@ and inference utilities while excluding the large generated weight files.
 OpenCV 3.4.7 was built from source with the ARM cross compiler. Tests, Python
 bindings, and unused backends were disabled, while V4L2, `opencv_world`, and the
 required vision modules were retained.
+
+For the final object-detection build, OpenMP and ARM NEON were enabled and the
+compiler used `-O3`, `-march=armv7-a`, `-mfpu=neon`, `-mfloat-abi=hard`, and
+`-ftree-vectorize`. Bundled zlib and JPEG support avoided target-sysroot header
+and version mismatches. A libpng NEON linker failure was resolved with
+`PNG_ARM_NEON_OPT=0`, while NEON remained enabled for the rest of OpenCV.
 
 The DNN-enabled build required Qt support to be disabled. This did not affect
 the applications because display output was handled through `/dev/fb0`.
@@ -300,9 +294,12 @@ LD_LIBRARY_PATH=. ./application
 │   ├── 01-framebuffer-display/  # Image, camera, HDMI, and scrolling demos
 │   ├── 02-face-recognition/     # Camera-based LBPH recognition
 │   ├── 03-helmet-detection/     # YOLOv3 helmet detection and display
-│   └── 04-object-detection/     # Custom YOLOv3 model configuration
+│   └── 04-object-detection/     # Final-project target applications
+│       ├── realtime-coco/       # Live YOLOv3-Tiny COCO detection
+│       └── custom-photo/        # Custom 30-class photo detection
 └── docs/
     ├── images/                  # Detection results
+    ├── model-and-dataset-provenance.md
     └── toolchain-setup.md       # Cross-compilation and deployment notes
 ```
 
@@ -366,6 +363,7 @@ Large generated models are intentionally excluded from Git:
 |---|---|
 | Face recognition | `trainer3.yml` |
 | Helmet detection | `yolov3-obj_2400.weights` |
+| Real-time COCO detection | `yolov3-tiny.weights` |
 | Custom object detection | `yolov3_custom_10000_v1.weights` and training checkpoints |
 
 Training data, camera recordings, virtual environments, compiled binaries, and
@@ -377,6 +375,9 @@ host-to-target workflow.
 
 - [`docs/toolchain-setup.md`](docs/toolchain-setup.md) documents the ARM OpenCV
   build, sysroot linking, framebuffer behavior, and deployment process.
+- [`docs/model-and-dataset-provenance.md`](docs/model-and-dataset-provenance.md)
+  records the retained model hashes, dataset exports, and historical resolution
+  differences.
 - [`host/README.md`](host/README.md) describes the host-side model and dataset
   workflow.
 - [`target/README.md`](target/README.md) describes the board-facing C++

@@ -15,4 +15,9 @@ Build and deployment commands are in the top-level README.
 | `01-framebuffer-display/` | Lab 2 — framebuffer output, camera capture, HDMI, scrolling display |
 | `02-face-recognition/` | Lab 3.1 — real-time LBPH face recognition |
 | `03-helmet-detection/` | Lab 3.2 — YOLOv3 helmet counting on a high-resolution photo |
-| `04-object-detection/` | Final project — 30-class YOLOv3 |
+| `04-object-detection/realtime-coco/` | Final project Part 1 — live YOLOv3-Tiny COCO detection |
+| `04-object-detection/custom-photo/` | Final project Part 2 — custom 30-class YOLOv3 photo detection |
+
+The two final-project programs and their runtime assets are documented in
+[`04-object-detection/README.md`](04-object-detection/README.md). Model weights
+remain outside Git because each Darknet checkpoint is roughly 235 MB.

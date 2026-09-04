@@ -15,7 +15,12 @@ you cross-compile and redeploy each time.
 | `tuning/test_on_desktop.py` | Webcam harness for choosing the confidence threshold |
 | `tuning/inspect_weights.py` | Detects corrupted YOLO checkpoints (NaN / all-zero weights) |
 | `reference/detect_helmet.py` | Parameter tuning for helmet detection before the C++ port |
-| `reference/detect_photo.py` | Same, for the final project model |
+| `reference/detect_photo.py` | Evaluate the final custom 30-class photo model |
+
+The final project also includes two board-side programs under
+`target/04-object-detection/`: a live YOLOv3-Tiny COCO detector and a custom
+30-class photo detector. Their model selection and artifact hashes are recorded
+in [`../docs/model-and-dataset-provenance.md`](../docs/model-and-dataset-provenance.md).
 
 Requires `opencv-contrib-python` — `cv2.face.LBPHFaceRecognizer` is a contrib module.
 Note that OpenCV 5.0 removed the Darknet importer these scripts rely on; use 4.x.

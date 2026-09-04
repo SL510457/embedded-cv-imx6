@@ -50,7 +50,7 @@ Configure with `cmake-gui`, selecting **"Specify options for cross-compiling"**
 (OS: `Linux`, version `4.1`, processor `arm`), pointing the C/C++ compilers at
 `arm-linux-gnueabihf-gcc` / `-g++`.
 
-Key settings:
+Baseline Lab 2/3 settings:
 
 | Option | Value |
 |---|---|
@@ -60,7 +60,40 @@ Key settings:
 | `ENABLE_CXX11` | ON |
 | `BUILD_PERF_TESTS`, `BUILD_TESTS`, `BUILD_opencv_ts` | OFF |
 | `BUILD_opencv_python_bindings_generator`, `..._python_tests` | OFF |
-| All `WITH_*` | OFF, **except** `WITH_V4L` |
+| Most `WITH_*` options | OFF; retain `WITH_V4L` and only the CPU features required by the selected build |
+
+### Final-project CPU optimization profile
+
+The final-project report records a second, performance-oriented OpenCV build
+for object detection. It retained the target and module settings above while
+also enabling:
+
+| Option | Value | Purpose |
+|---|---|---|
+| `WITH_OPENMP` | ON | Use the i.MX6Q's four CPU cores where OpenCV provides parallel regions |
+| `ENABLE_NEON` | ON | Enable ARM NEON SIMD code paths |
+| `BUILD_ZLIB` | ON | Build a matching zlib instead of depending on missing sysroot headers |
+| `BUILD_JPEG` | ON | Keep JPEG decoding independent of the target's library version |
+
+The final build also passed these flags through `CMAKE_C_FLAGS` and
+`CMAKE_CXX_FLAGS`:
+
+```text
+-O3 -march=armv7-a -mfpu=neon -mfloat-abi=hard -ftree-vectorize
+```
+
+Enabling NEON exposed an unresolved `png_*_neon` linker reference in the
+bundled libpng path. The retained workaround was:
+
+```text
+-DPNG_ARM_NEON_OPT=0
+```
+
+This disables the problematic libpng-specific NEON path, not NEON throughout
+OpenCV. The report records more than 4.8 seconds for the earlier unoptimized
+inference path and a goal below one second, but no reproducible final benchmark
+log survives. For that reason, the repository does not claim a measured final
+latency or FPS.
 
 ### Gotcha — Qt breaks the DNN module
 

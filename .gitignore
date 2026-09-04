@@ -28,3 +28,7 @@ __pycache__/
 *.pyc
 
 .DS_Store
+
+# Local career and interview material
+/docs/resume-project-summary.md
+/docs/interview-study-guide.md
